@@ -1,3 +1,5 @@
+import type { OuvrageLine } from "../domain/ouvrages/types";
+
 export type Totals = {
   carrelage_m2: number;
   carrelage_cartons: number;
@@ -27,8 +29,9 @@ export type HistoryLine = {
   pieceId: string;
   texte: string;
   data: {
-    type: "carrelage" | "peinture" | "placo" | "bardage" | "plomberie";
+    type: "carrelage" | "peinture" | "placo" | "bardage" | "plomberie" | "electricite";
     values: Record<string, number>;
+    ouvrageLine?: OuvrageLine<Record<string, number>>;
   };
 };
 
@@ -87,6 +90,8 @@ const accumulateHistoryLine = (totals: Totals, h: HistoryLine): void => {
       totals.plomberie_evacu_ml += v.evacMl || 0;
       totals.plomberie_robinets += v.robinets || 0;
       totals.plomberie_siphons += v.siphons || 0;
+      break;
+    case "electricite":
       break;
   }
 };

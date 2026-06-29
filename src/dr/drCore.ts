@@ -24,7 +24,7 @@ export type DRValidationError = {
   message: string;
 };
 
-export type DRValidationResult<T extends Record<string, any>> = {
+export type DRValidationResult<T extends Record<string, number>> = {
   ok: boolean;
   values: T | null;
   errors: DRValidationError[];
@@ -48,7 +48,7 @@ export function validateNumericParams<
   raw: Partial<Record<keyof T, unknown>>
 ): DRValidationResult<T> {
   const errors: DRValidationError[] = [];
-  const values: any = {};
+  const values: Partial<T> = {};
 
   (Object.keys(specMap) as (keyof T)[]).forEach((key) => {
     const spec = specMap[key];
@@ -89,7 +89,7 @@ export function validateNumericParams<
       });
     }
 
-    values[key] = num;
+    values[key] = num as T[typeof key];
   });
 
   if (errors.length > 0) {
@@ -166,7 +166,7 @@ export function aggregateTotals<
   result: TResult,
   mapper: (acc: TTotals, out: TResult) => TTotals
 ): TTotals {
-  const clone: TTotals = { ...(current as any) };
+  const clone: TTotals = { ...current };
   return mapper(clone, result);
 }
 

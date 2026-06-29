@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { Button, Card, Chip, Field, TextInput } from "../components/ui";
 import { computeTotalsForChantier, computeTotalsForPiece, computeTotalsGlobal } from "../dr/drTotals";
 import { NIVEAUX, PIECE_TYPES } from "../state/types";
-import { useStore } from "../state/store";
+import { useStore } from "../state/storeHooks";
 
 export const ChantierPage = () => {
   const { chantierId } = useParams();

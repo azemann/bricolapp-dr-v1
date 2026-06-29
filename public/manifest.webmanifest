@@ -1,0 +1,19 @@
+{
+  "name": "Bricolapp DR",
+  "short_name": "Bricolapp",
+  "description": "Pilotage de chantier et calculs DR utilisables hors ligne.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f1ea",
+  "theme_color": "#1f2937",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,26 +1,29 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card } from "../components/ui";
-import { useStore } from "../state/store";
+import { useStore } from "../state/storeHooks";
 
 export const PiecePage = () => {
   const { pieceId } = useParams();
   const { state, dispatch } = useStore();
 
-  const pieceContext = useMemo(() => {
+  const pieceContext = (() => {
     for (const chantier of state.chantiers) {
       const piece = chantier.pieces.find((p) => p.id === pieceId);
       if (piece) return { chantier, piece };
     }
     return null;
-  }, [state.chantiers, pieceId]);
+  })();
+
+  const chantierId = pieceContext?.chantier.id;
+  const activePieceId = pieceContext?.piece.id;
 
   useEffect(() => {
-    if (pieceContext) {
-      dispatch({ type: "CHANTIER_SET_ACTIVE", payload: { chantierId: pieceContext.chantier.id } });
-      dispatch({ type: "PIECE_SET_ACTIVE", payload: { pieceId: pieceContext.piece.id } });
+    if (chantierId && activePieceId) {
+      dispatch({ type: "CHANTIER_SET_ACTIVE", payload: { chantierId } });
+      dispatch({ type: "PIECE_SET_ACTIVE", payload: { pieceId: activePieceId } });
     }
-  }, [dispatch, pieceContext]);
+  }, [dispatch, chantierId, activePieceId]);
 
   if (!pieceContext) {
     return (

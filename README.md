@@ -15,6 +15,17 @@ npm run dev
 npm run build
 ```
 
+## PWA
+
+L'application fournit un manifeste web et un service worker en production.
+
+```bash
+npm run build
+npm run preview
+```
+
+Le service worker met en cache le shell applicatif et les ressources du même domaine après leur première lecture. Les données métier restent stockées localement dans le navigateur.
+
 ## Notes
 
 - Route principale : `/`

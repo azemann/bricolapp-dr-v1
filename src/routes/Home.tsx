@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button, Card, Field, TextInput } from "../components/ui";
-import { useStore } from "../state/store";
+import { useStore } from "../state/storeHooks";
 import { useState } from "react";
 
 export const Home = () => {

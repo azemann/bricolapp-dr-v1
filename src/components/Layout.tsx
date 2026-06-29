@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useActiveContext } from "../state/store";
+import { useActiveContext } from "../state/storeHooks";
 
 const NavItem = ({ to, label }: { to: string; label: string }) => (
   <NavLink
@@ -18,7 +18,7 @@ export const Layout = () => {
       <header className="app-header">
         <div>
           <p className="app-kicker">DR BricoChantier</p>
-          <h1 className="app-title">Pilotage chantier + calculs DR</h1>
+          <h1 className="app-title">Pilotage chantier + ouvrages DR</h1>
         </div>
         <div className="active-badges">
           <div className="badge">
@@ -38,7 +38,7 @@ export const Layout = () => {
 
       <nav className="bottom-nav">
         <NavItem to="/" label="Chantiers" />
-        <NavItem to="/modules/carrelage" label="Modules" />
+        <NavItem to="/modules/carrelage" label="Ouvrages" />
         <NavItem to="/devis" label="Devis" />
       </nav>
     </div>

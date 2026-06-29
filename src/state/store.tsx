@@ -1,16 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer } from "react";
+import React, { useEffect, useMemo, useReducer } from "react";
 import type { AppAction, AppState, Chantier, Piece } from "./types";
 import { defaultPrices } from "./types";
-import type { HistoryLine } from "../dr/drTotals";
+import { createId } from "./ids";
+import { StoreContext } from "./storeContext";
 
 const STORAGE_KEY = "bricochantier_state_v0";
-
-const createId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-};
 
 const emptyState = (): AppState => ({
   chantiers: [],
@@ -161,11 +155,6 @@ const reducer = (state: AppState, action: AppAction): AppState => {
   }
 };
 
-const StoreContext = createContext<{
-  state: AppState;
-  dispatch: React.Dispatch<AppAction>;
-} | null>(null);
-
 export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(reducer, undefined, loadState);
 
@@ -177,31 +166,3 @@ export const StoreProvider = ({ children }: { children: React.ReactNode }) => {
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 };
-
-export const useStore = () => {
-  const ctx = useContext(StoreContext);
-  if (!ctx) {
-    throw new Error("useStore must be used within StoreProvider");
-  }
-  return ctx;
-};
-
-export const useActiveContext = () => {
-  const { state } = useStore();
-  const chantier = state.chantiers.find((c) => c.id === state.activeChantierId) || null;
-  const piece = chantier?.pieces.find((p) => p.id === state.activePieceId) || null;
-  return { chantier, piece };
-};
-
-export const buildHistoryLine = (
-  chantierId: string,
-  pieceId: string,
-  texte: string,
-  data: HistoryLine["data"]
-): HistoryLine => ({
-  id: createId(),
-  chantierId,
-  pieceId,
-  texte,
-  data,
-});

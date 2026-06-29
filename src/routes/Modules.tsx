@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Chip, Field, NumericInput } from "../components/ui";
 import {
@@ -17,7 +17,21 @@ import type {
   PlomberieParams,
 } from "../dr/drEngine";
 import type { HistoryLine } from "../dr/drTotals";
-import { useActiveContext, useStore, buildHistoryLine } from "../state/store";
+import { buildElectriciteInstallationCompleteHistoryDraft } from "../domain/history/electriciteHistory";
+import {
+  buildBardageHistoryDraft,
+  buildCarrelageHistoryDraft,
+  buildPeintureHistoryDraft,
+  buildPlacoHistoryDraft,
+  buildPlomberieHistoryDraft,
+} from "../domain/history/legacyHistory";
+import { computeElectriciteOuvrage } from "../domain/trades/electricite/engine";
+import {
+  installationElectriqueCompleteOuvrage,
+  type InstallationElectriqueCompleteInputs,
+} from "../domain/trades/electricite/ouvrages/installationElectriqueComplete";
+import { defaultElectricitePricing } from "../domain/trades/electricite/pricing";
+import { useActiveContext, useStore, buildHistoryLine } from "../state/storeHooks";
 
 const MODULES = [
   { id: "carrelage", label: "Carrelage" },
@@ -25,6 +39,7 @@ const MODULES = [
   { id: "placo", label: "Placo" },
   { id: "bardage", label: "Bardage" },
   { id: "plomberie", label: "Plomberie" },
+  { id: "electricite", label: "Électricité" },
 ] as const;
 
 type ModuleId = (typeof MODULES)[number]["id"];
@@ -35,15 +50,24 @@ export const ModulesPage = () => {
   const activeModule = (moduleId as ModuleId) || "carrelage";
   const { chantier, piece } = useActiveContext();
   const { dispatch } = useStore();
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [validationState, setValidationState] = useState<{
+    moduleId: ModuleId;
+    errors: string[];
+  }>({ moduleId: activeModule, errors: [] });
+
+  const validationErrors =
+    validationState.moduleId === activeModule ? validationState.errors : [];
 
   const handleValidation = (validation: { ok: boolean; errors: { message: string }[] }) => {
     if (!validation.ok) {
-      setValidationErrors(validation.errors.map((error) => error.message));
+      setValidationState({
+        moduleId: activeModule,
+        errors: validation.errors.map((error) => error.message),
+      });
       return false;
     }
 
-    setValidationErrors([]);
+    setValidationState({ moduleId: activeModule, errors: [] });
     return true;
   };
 
@@ -115,13 +139,38 @@ export const ModulesPage = () => {
   });
   const [plResult, setPlResult] = useState<ReturnType<typeof PlomberieModule.compute> | null>(null);
 
-  useEffect(() => {
-    setValidationErrors([]);
-  }, [activeModule]);
+  const [elecInputs, setElecInputs] = useState({
+    surfaceLogementM2: "80",
+    nombrePieces: "5",
+    nombrePrises: "24",
+    nombrePointsLumineux: "10",
+    nombreCircuitsSpecialises: "6",
+    longueurMoyenneCircuitMl: "12",
+  });
+  const [elecResult, setElecResult] = useState<ReturnType<typeof computeElectriciteOuvrage> | null>(null);
 
   const warning = !chantier || !piece;
 
   const pieceName = piece ? `${piece.name} (${piece.level})` : "";
+
+  const parseElectriciteInputs = (): InstallationElectriqueCompleteInputs => ({
+    surfaceLogementM2: Number(elecInputs.surfaceLogementM2.replace(",", ".")) || 0,
+    nombrePieces: Number(elecInputs.nombrePieces.replace(",", ".")) || 0,
+    nombrePrises: Number(elecInputs.nombrePrises.replace(",", ".")) || 0,
+    nombrePointsLumineux: Number(elecInputs.nombrePointsLumineux.replace(",", ".")) || 0,
+    nombreCircuitsSpecialises: Number(elecInputs.nombreCircuitsSpecialises.replace(",", ".")) || 0,
+    longueurMoyenneCircuitMl: Number(elecInputs.longueurMoyenneCircuitMl.replace(",", ".")) || 0,
+    buildingContext: "renovation",
+    poseMode: "mixte",
+    wallType: "placo",
+    ceilingType: "placo",
+    accessibility: "moyenne",
+    averageHeightM: 2.5,
+    avecTableau: true,
+    avecGtl: true,
+    avecMiseTerre: true,
+    requiresConsuel: false,
+  });
 
   const addLine = (texte: string, data: HistoryLine["data"]) => {
     if (!chantier || !piece) return;
@@ -143,18 +192,8 @@ export const ModulesPage = () => {
       const validation = validateNumericParams(CarrelageModule.inputSpec, carInputs);
       if (!handleValidation(validation) || !chantier || !piece) return;
       const result = CarrelageModule.compute(validation.values as CarrelageParams);
-      const texte = CarrelageModule.toHistoryText
-        ? CarrelageModule.toHistoryText(validation.values as CarrelageParams, result, { pieceName })
-        : `Carrelage - ${pieceName}`;
-      addLine(texte, {
-        type: "carrelage",
-        values: {
-          surface: result.surface,
-          nbCartons: result.nbCartons,
-          colleSacs: result.colleSacs,
-          jointsKg: result.jointsKg,
-        },
-      });
+      const draft = buildCarrelageHistoryDraft(validation.values as CarrelageParams, result, { pieceName });
+      addLine(draft.texte, draft.data);
       setCarResult(result);
     };
 
@@ -205,17 +244,8 @@ export const ModulesPage = () => {
       const validation = validateNumericParams(PeintureModule.inputSpec, peinInputs);
       if (!handleValidation(validation) || !chantier || !piece) return;
       const result = PeintureModule.compute(validation.values as PeintureParams);
-      const texte = PeintureModule.toHistoryText
-        ? PeintureModule.toHistoryText(validation.values as PeintureParams, result, { pieceName })
-        : `Peinture - ${pieceName}`;
-      addLine(texte, {
-        type: "peinture",
-        values: {
-          surfacePeinte: result.surfacePeinte,
-          nbPots: result.nbPots,
-          sousCouchePots: result.sousCouchePots,
-        },
-      });
+      const draft = buildPeintureHistoryDraft(validation.values as PeintureParams, result, { pieceName });
+      addLine(draft.texte, draft.data);
       setPeinResult(result);
     };
 
@@ -293,20 +323,8 @@ export const ModulesPage = () => {
       const validation = validateNumericParams(PlacoModule.inputSpec, plaInputs);
       if (!handleValidation(validation) || !chantier || !piece) return;
       const result = PlacoModule.compute(validation.values as PlacoParams);
-      const texte = PlacoModule.toHistoryText
-        ? PlacoModule.toHistoryText(validation.values as PlacoParams, result, { pieceName })
-        : `Placo - ${pieceName}`;
-      addLine(texte, {
-        type: "placo",
-        values: {
-          surface: result.surface,
-          nbPlaques: result.nbPlaques,
-          nbMontants: result.nbMontants,
-          rails: result.rails,
-          visBoites: result.visBoites,
-          bandesSacs: result.bandesSacs,
-        },
-      });
+      const draft = buildPlacoHistoryDraft(validation.values as PlacoParams, result, { pieceName });
+      addLine(draft.texte, draft.data);
       setPlaResult(result);
     };
 
@@ -357,17 +375,8 @@ export const ModulesPage = () => {
       const validation = validateNumericParams(BardageModule.inputSpec, barInputs);
       if (!handleValidation(validation) || !chantier || !piece) return;
       const result = BardageModule.compute(validation.values as BardageParams);
-      const texte = BardageModule.toHistoryText
-        ? BardageModule.toHistoryText(validation.values as BardageParams, result, { pieceName })
-        : `Bardage - ${pieceName}`;
-      addLine(texte, {
-        type: "bardage",
-        values: {
-          surface: result.surface,
-          nbLames: result.nbLames,
-          liteauxMl: result.liteauxMl,
-        },
-      });
+      const draft = buildBardageHistoryDraft(validation.values as BardageParams, result, { pieceName });
+      addLine(draft.texte, draft.data);
       setBarResult(result);
     };
 
@@ -415,18 +424,8 @@ export const ModulesPage = () => {
       const validation = validateNumericParams(PlomberieModule.inputSpec, plInputs);
       if (!handleValidation(validation) || !chantier || !piece) return;
       const result = PlomberieModule.compute(validation.values as PlomberieParams);
-      const texte = PlomberieModule.toHistoryText
-        ? PlomberieModule.toHistoryText(validation.values as PlomberieParams, result, { pieceName })
-        : `Plomberie - ${pieceName}`;
-      addLine(texte, {
-        type: "plomberie",
-        values: {
-          alimMl: result.alimMl,
-          evacMl: result.evacMl,
-          robinets: result.robinets,
-          siphons: result.siphons,
-        },
-      });
+      const draft = buildPlomberieHistoryDraft(validation.values as PlomberieParams, result, { pieceName });
+      addLine(draft.texte, draft.data);
       setPlResult(result);
     };
 
@@ -479,19 +478,101 @@ export const ModulesPage = () => {
     );
   };
 
+  const renderElectricite = () => {
+    const onCalc = () => {
+      const inputs = parseElectriciteInputs();
+      setElecResult(
+        computeElectriciteOuvrage(
+          installationElectriqueCompleteOuvrage,
+          inputs,
+          defaultElectricitePricing,
+        ),
+      );
+    };
+
+    const onAdd = () => {
+      if (!chantier || !piece) return;
+      const inputs = parseElectriciteInputs();
+      const result = computeElectriciteOuvrage(
+        installationElectriqueCompleteOuvrage,
+        inputs,
+        defaultElectricitePricing,
+      );
+      const draft = buildElectriciteInstallationCompleteHistoryDraft(inputs, { pieceName });
+      addLine(draft.texte, draft.data);
+      setElecResult(result);
+    };
+
+    return (
+      <Card>
+        <h2>Électricité</h2>
+        <p className="muted">Installation électrique complète, calculée par le nouveau moteur ouvrage.</p>
+        <Field label="Surface logement (m2)">
+          <NumericInput
+            value={elecInputs.surfaceLogementM2}
+            onChange={(value) => setElecInputs({ ...elecInputs, surfaceLogementM2: value })}
+          />
+        </Field>
+        <Field label="Nombre de pièces">
+          <NumericInput
+            value={elecInputs.nombrePieces}
+            onChange={(value) => setElecInputs({ ...elecInputs, nombrePieces: value })}
+          />
+        </Field>
+        <Field label="Prises">
+          <NumericInput
+            value={elecInputs.nombrePrises}
+            onChange={(value) => setElecInputs({ ...elecInputs, nombrePrises: value })}
+          />
+        </Field>
+        <Field label="Points lumineux">
+          <NumericInput
+            value={elecInputs.nombrePointsLumineux}
+            onChange={(value) => setElecInputs({ ...elecInputs, nombrePointsLumineux: value })}
+          />
+        </Field>
+        <Field label="Circuits spécialisés">
+          <NumericInput
+            value={elecInputs.nombreCircuitsSpecialises}
+            onChange={(value) => setElecInputs({ ...elecInputs, nombreCircuitsSpecialises: value })}
+          />
+        </Field>
+        <Field label="Longueur moyenne circuit (m)">
+          <NumericInput
+            value={elecInputs.longueurMoyenneCircuitMl}
+            onChange={(value) => setElecInputs({ ...elecInputs, longueurMoyenneCircuitMl: value })}
+          />
+        </Field>
+        <div className="row">
+          <Button variant="primary" onClick={onCalc}>Calculer</Button>
+          <Button onClick={onAdd}>Ajouter au chantier</Button>
+        </div>
+        {elecResult && (
+          <div className="result">
+            <p>Matériaux : {elecResult.needs.length} postes</p>
+            <p>Temps : {elecResult.labor.hours.toFixed(1)} h</p>
+            <p>Vente HT : {elecResult.profitability.salePriceHT.toFixed(2)} €</p>
+            <p>Marge : {elecResult.profitability.marginAmount.toFixed(2)} €</p>
+          </div>
+        )}
+      </Card>
+    );
+  };
+
   let moduleContent = renderCarrelage();
   if (activeModule === "peinture") moduleContent = renderPeinture();
   if (activeModule === "placo") moduleContent = renderPlaco();
   if (activeModule === "bardage") moduleContent = renderBardage();
   if (activeModule === "plomberie") moduleContent = renderPlomberie();
+  if (activeModule === "electricite") moduleContent = renderElectricite();
 
   return (
     <div className="page">
       <Card>
         <div className="row space-between">
           <div>
-            <h2>Modules DR</h2>
-            <p className="muted">Selectionne un module puis ajoute la ligne dans la piece active.</p>
+            <h2>Ouvrages DR</h2>
+            <p className="muted">Selectionne un ouvrage puis ajoute la ligne dans la piece active.</p>
           </div>
           {warning ? (
             <Link className="btn btn-default" to="/">

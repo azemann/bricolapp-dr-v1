@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Bricolapp DR</title>
+  <desc id="desc">Icône de chantier avec règle et calcul DR.</desc>
+  <rect width="512" height="512" rx="96" fill="#1f2937"/>
+  <path d="M120 344h272v56H120z" fill="#f59e0b"/>
+  <path d="M144 112h224v184H144z" fill="#fff8f1"/>
+  <path d="M176 152h160v24H176zm0 56h112v24H176zm0 56h136v24H176z" fill="#1f2937"/>
+  <path d="M376 112h32v288h-32z" fill="#d1c5b8"/>
+  <path d="M376 144h32m-32 48h32m-32 48h32m-32 48h32m-32 48h32" stroke="#1f2937" stroke-width="12"/>
+  <circle cx="132" cy="128" r="28" fill="#f59e0b"/>
+</svg>
