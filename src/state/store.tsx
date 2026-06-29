@@ -96,6 +96,10 @@ const reducer = (state: AppState, action: AppAction): AppState => {
       };
     }
     case "CHANTIER_SET_ACTIVE": {
+      if (state.activeChantierId === action.payload.chantierId) {
+        return state;
+      }
+
       return {
         ...state,
         activeChantierId: action.payload.chantierId,
@@ -110,6 +114,7 @@ const reducer = (state: AppState, action: AppAction): AppState => {
         chantiers: state.chantiers.map((c) =>
           c.id === chantierId ? { ...c, pieces: [...c.pieces, newPiece] } : c
         ),
+        activeChantierId: chantierId,
         activePieceId: newPiece.id,
       };
     }

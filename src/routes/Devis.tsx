@@ -8,11 +8,22 @@ import { useActiveContext, useStore } from "../state/storeHooks";
 
 const formatEuros = (value: number) => `${value.toFixed(2)} €`;
 
+type GeneratedQuoteText = {
+  sourceKey: string;
+  text: string;
+};
+
 export const DevisPage = () => {
   const { state, dispatch } = useStore();
   const { chantier } = useActiveContext();
-  const [devisGlobalText, setDevisGlobalText] = useState("");
-  const [devisChantierText, setDevisChantierText] = useState("");
+  const [devisGlobalDraft, setDevisGlobalDraft] = useState<GeneratedQuoteText>({
+    sourceKey: "",
+    text: "",
+  });
+  const [devisChantierDraft, setDevisChantierDraft] = useState<GeneratedQuoteText>({
+    sourceKey: "",
+    text: "",
+  });
 
   const totalsGlobal = computeTotalsGlobal(state.history);
   const totalsChantier = chantier
@@ -20,6 +31,7 @@ export const DevisPage = () => {
     : emptyTotals();
 
   const prices = state.prices;
+  const chantierId = chantier?.id || null;
 
   const totalGlobalCosts = calcPricing({ totals: totalsGlobal, prices });
   const totalChantierCosts = calcPricing({ totals: totalsChantier, prices });
@@ -45,26 +57,47 @@ export const DevisPage = () => {
       history: state.history.filter((line) => line.chantierId === c.id),
     }));
   }, [state.chantiers, state.history]);
+  const globalQuoteSourceKey = useMemo(
+    () => JSON.stringify({ history: state.history, prices }),
+    [state.history, prices],
+  );
+  const chantierQuoteSourceKey = useMemo(
+    () =>
+      JSON.stringify({
+        chantierId,
+        history: chantier
+          ? state.history.filter((line) => line.chantierId === chantier.id)
+          : [],
+        prices,
+      }),
+    [chantier, chantierId, state.history, prices],
+  );
+  const devisGlobalText =
+    devisGlobalDraft.sourceKey === globalQuoteSourceKey ? devisGlobalDraft.text : "";
+  const devisChantierText =
+    devisChantierDraft.sourceKey === chantierQuoteSourceKey ? devisChantierDraft.text : "";
 
   const generateDevisText = (scope: "global" | "chantier") => {
     if (scope === "global") {
-      setDevisGlobalText(
-        formatGlobalQuoteText({
+      setDevisGlobalDraft({
+        sourceKey: globalQuoteSourceKey,
+        text: formatGlobalQuoteText({
           historyByChantier,
           totals: totalsGlobal,
           costs: totalGlobalCosts,
           prices,
           ouvrageLines: ouvrageLinesGlobal,
         }),
-      );
+      });
       return;
     }
 
     const chantierHistory = chantier
       ? state.history.filter((line) => line.chantierId === chantier.id)
       : [];
-    setDevisChantierText(
-      formatChantierQuoteText({
+    setDevisChantierDraft({
+      sourceKey: chantierQuoteSourceKey,
+      text: formatChantierQuoteText({
         chantier,
         chantierHistory,
         totals: totalsChantier,
@@ -72,7 +105,7 @@ export const DevisPage = () => {
         prices,
         ouvrageLines: ouvrageLinesChantier,
       }),
-    );
+    });
   };
 
   const copyToClipboard = async (text: string) => {
@@ -240,7 +273,12 @@ export const DevisPage = () => {
         <textarea
           className="textarea"
           value={devisGlobalText}
-          onChange={(event) => setDevisGlobalText(event.target.value)}
+          onChange={(event) =>
+            setDevisGlobalDraft({
+              sourceKey: globalQuoteSourceKey,
+              text: event.target.value,
+            })
+          }
           rows={10}
         />
       </Card>
@@ -287,7 +325,12 @@ export const DevisPage = () => {
         <textarea
           className="textarea"
           value={devisChantierText}
-          onChange={(event) => setDevisChantierText(event.target.value)}
+          onChange={(event) =>
+            setDevisChantierDraft({
+              sourceKey: chantierQuoteSourceKey,
+              text: event.target.value,
+            })
+          }
           rows={10}
         />
       </Card>
